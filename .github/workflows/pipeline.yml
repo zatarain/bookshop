@@ -1,4 +1,4 @@
-name: Back-end Continuous Integration
+name: Continuous Integration Pipeline
 on:
   push:
     branches: [main, staging, development]
