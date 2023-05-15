@@ -23,6 +23,60 @@ That database should have a table that contains following data:
 | `created`  | `DATETIME`    | Timestamp representing the creation time    |
 | `updated`  | `DATETIME`    | Timestamp representing the last update time |
 
+## 📐 Design
+The architecture will be a HTTP microservice that will consume some configuration and use ORM to represent the records in the database tables and also a Model-Controller (MC) pattern design, so the controllers will contain the handlers for the API requests, while the models will manage the data and connect to the database.
+
+```mermaid
+classDiagram
+
+class Book {
+	ID int
+	Title string
+	Author string
+	Price double
+	Quantity int
+	Created time
+	Updated time
+}
+
+class BooksController {
+	recordset Book
+	add(context gin.Context)
+	index(context gin.Context)
+	delete(context gin.Context)
+	view(context gin.Context)
+	edit(context gin.Context)
+	checkout(context gin.Context)
+}
+
+class Configuration {
+	endpoints map[string]func
+	port int
+}
+
+class Database {
+	connection string
+	insert(... args)
+	delete(... args)
+	update(... args)
+	select(... args)
+}
+
+class Server {
+	configuration Configuration
+	init()
+	main()
+}
+
+Book *-- BooksController : uses
+Database *-- Book: connects to
+Configuration *-- Server: consumes
+Server --o BooksController: maps/routes to
+AppController <|-- BooksController
+Model <|-- Book
+
+```
+
 ## 🏗️ Implementation details
 We are using Golang as programming language for the implementation of the API operations. And the database is a single table in SQLite stored locally.
 ### 📦 Dependencies
