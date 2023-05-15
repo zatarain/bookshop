@@ -7,53 +7,27 @@ on:
     types: [opened, synchronize]
   
 jobs:
-  setup:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Installing go and dependencies
+      - name: Installing go
         uses: actions/setup-go@v4
         with:
           go-version: '^1.20.0'
-      - run: go mod tidy
-        
-  lint:
-    needs: [setup]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Installing go and dependencies
-        uses: actions/setup-go@v4
-        with:
-          go-version: '^1.20.0'
+      - name: Installing dependencies
+        run: go mod tidy
       - name: Run linter
         run: go mod tidy && gofmt -l .
-              
-  unit-tests:
-    needs: [setup]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Installing go and dependencies
-        uses: actions/setup-go@v4
-        with:
-          go-version: '^1.20.0'
       - name: Run test cases
-        run: go mod tidy && go test -v --cover
+        run: go test -v --cover
               
   deploy:
-    needs: [lint, unit-tests]
+    needs: [build]
     runs-on: ubuntu-latest
-    if:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
