@@ -21,7 +21,7 @@ jobs:
       - name: Installing dependencies
         run: |
           go mod tidy
-          go get -u golang.org/x/lint/golint
+          go install golang.org/x/lint/golint
       - name: Run Vet & Lint
         run: |
           go vet .
@@ -29,8 +29,8 @@ jobs:
       - name: Build
         run: go build .
       - name: Run test cases with coverage
-        run: go test -v  -coverprofile=coverage.txt -covermode=atomic ./...
-      - name: Upload coverage report to CodeCov
+        run: go test -v -coverprofile=coverage.txt -covermode=atomic ./...
+      - name: Upload coverage report to CodeCov 
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
