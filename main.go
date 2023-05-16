@@ -1,7 +1,13 @@
 package main
 
-import "log"
+import (
+	"github.com/gin-gonic/gin"
+	"github.com/zatarain/bookshop/configuration"
+)
 
 func main() {
-	log.Println("OK, go!")
+	configuration.Load()
+	server := gin.Default()
+	configuration.Setup(server)
+	server.Run()
 }
