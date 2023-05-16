@@ -5,7 +5,7 @@ import (
 	"github.com/zatarain/bookshop/controllers"
 )
 
-func Setup(server *gin.Engine) {
+func Setup(server gin.IRouter) {
 	server.HEAD("/health", controllers.HealthCheck)
 	server.GET("/books", controllers.GetBooks)
 }
