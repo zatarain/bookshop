@@ -13,46 +13,45 @@ import (
 )
 
 func TestLoad(test *testing.T) {
-	// Arrange
 	assert := assert.New(test)
-	isLoaded := false
-	monkey.Patch(godotenv.Load, func(...string) error {
-		isLoaded = true
-		return nil
+	test.Run("Should load the environment with godotenv", func(test *testing.T) {
+		// Arrange
+		isLoaded := false
+		monkey.Patch(godotenv.Load, func(...string) error {
+			isLoaded = true
+			return nil
+		})
+
+		// Act
+		Load()
+
+		// Assert
+		assert.True(isLoaded)
+
+		// Teardown
+		monkey.UnpatchAll()
 	})
 
-	// Act
-	Load()
+	test.Run("Should log the error as fatal while trying to load the environment", func(test *testing.T) {
+		// Arrange
+		hasBeenCalled := false
+		monkey.Patch(log.Fatal, log.Print)
+		var capture bytes.Buffer
+		log.SetOutput(&capture)
+		monkey.Patch(godotenv.Load, func(...string) error {
+			hasBeenCalled = true
+			return errors.New("Error while loading")
+		})
 
-	// Assert
-	assert.True(isLoaded)
+		// Act
+		Load()
 
-	// Teardown
-	monkey.UnpatchAll()
-}
+		// Assert
+		assert.Equal(true, hasBeenCalled)
+		assert.Contains(capture.String(), "Error loading environment variables file.")
 
-func TestLoad_Error(test *testing.T) {
-	// Arrange
-	assert := assert.New(test)
-	hasBeenCalled := false
-	monkey.Patch(godotenv.Load, func(...string) error {
-		hasBeenCalled = true
-		return errors.New("Error while loading")
+		// Teardown
+		log.SetOutput(os.Stderr)
+		monkey.UnpatchAll()
 	})
-
-	monkey.Patch(log.Fatal, log.Print)
-
-	var capture bytes.Buffer
-	log.SetOutput(&capture)
-
-	// Act
-	Load()
-
-	// Assert
-	assert.Equal(true, hasBeenCalled)
-	assert.Contains(capture.String(), "Error loading environment variables file.")
-
-	// Teardown
-	log.SetOutput(os.Stderr)
-	monkey.UnpatchAll()
 }
