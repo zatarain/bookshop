@@ -91,6 +91,7 @@ We are using following libraries for the implementation:
 And also, following ones for the development:
  * **`testify`.** To have more readable assertions on the unit testing.
  * **`mockery`.** To generate mocks used on unit testing.
+ * **`monkey`.** To perform monkey patching on the unit testing.
 
  ## 🤔 Assumptions
 This is a small example and it's not taking care about some coner case scenaries like following:
