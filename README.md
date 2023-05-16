@@ -1,4 +1,4 @@
-# 🧑🏽‍💻 Project `bookshop` [![Continuous Integration Pipeline](https://github.com/zatarain/bookshop/actions/workflows/pipeline.yml/badge.svg)](https://github.com/zatarain/bookshop/actions/workflows/pipeline.yml) [![codecov](https://codecov.io/github/zatarain/bookshop/branch/main/graph/badge.svg?token=BQRBXEN0PR)](https://codecov.io/github/zatarain/bookshop)
+# 🧑🏽‍💻 Project `bookshop` [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause) [![Continuous Integration Pipeline](https://github.com/zatarain/bookshop/actions/workflows/pipeline.yml/badge.svg)](https://github.com/zatarain/bookshop/actions/workflows/pipeline.yml) [![codecov](https://codecov.io/github/zatarain/bookshop/branch/main/graph/badge.svg?token=BQRBXEN0PR)](https://codecov.io/github/zatarain/bookshop) [![Go Report Card](https://goreportcard.com/badge/github.com/zatarain/bookshop)](https://goreportcard.com/report/github.com/zatarain/bookshop)
 This project intents to be an example to use it as a playground for an API development of a book shop implemented in Golang.
 
 ## ☑️ Requirements
