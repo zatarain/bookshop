@@ -1,8 +1,7 @@
-package main
+package controllers
 
 import (
 	"bytes"
-	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -17,22 +16,23 @@ import (
 func TestMain(test *testing.T) {
 	assert := assert.New(test)
 	gin.SetMode(gin.TestMode)
+	server := gin.Default()
+	server.HEAD("/health", HealthCheck)
 	recorder := httptest.NewRecorder()
 	var capture bytes.Buffer
 	log.SetOutput(&capture)
-	main()
-	request, exception := http.NewRequest(http.MethodHead, "/", nil)
-	assert.ErrorIs(exception, nil, "Check we don't get an error on the request.")
+
+	request, exception := http.NewRequest(http.MethodHead, "/health", nil)
+	assert.Nil(exception)
 
 	// Perform the request
-	server := gin.Default()
 	server.ServeHTTP(recorder, request)
 
 	// Check to see if the response was what you expected
-	assert.Equal(recorder.Code, http.StatusOK, "Checking expected status.")
+	assert.Equal(http.StatusOK, recorder.Code)
 
 	log.SetOutput(os.Stderr)
 	actual := capture.String()
 	expected := "OK, go!"
-	assert.Contains(actual, expected, fmt.Sprintf("Incorrect output, expected '%s' got '%s'", expected, actual))
+	assert.Contains(expected, actual)
 }

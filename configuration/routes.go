@@ -1,20 +1,11 @@
 package configuration
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	"github.com/zatarain/bookshop/controllers"
 )
 
-type HttpServer interface {
-	gin.IRoutes
-	Run(...string) error
-}
-
-func HealthCheck(context *gin.Context) {
-	context.String(http.StatusOK, "OK, go!")
-}
-
 func Setup(server *gin.Engine) {
-	server.HEAD("/health", HealthCheck)
+	server.HEAD("/health", controllers.HealthCheck)
+	server.GET("/books", controllers.GetBooks)
 }
