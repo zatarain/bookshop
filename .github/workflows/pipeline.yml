@@ -22,8 +22,16 @@ jobs:
         run: go mod tidy
       - name: Run linter
         run: go mod tidy && gofmt -l .
-      - name: Run test cases
-        run: go test -v --cover
+      - name: Run test cases with coverage
+        run: go test ./... -v --cover -covermode=count -coverprofile=coverage.out
+      - name: Generate coverage report
+        run: go tool cover -html=coverage.out -o coverage.html
+      - name: Upload coverage report to CodeCov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.html
+        
               
   deploy:
     needs: [build]
