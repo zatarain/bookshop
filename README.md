@@ -1,4 +1,4 @@
-# 🧑🏽‍💻 Project `bookshop` [![Continuous Integration Pipeline](https://github.com/zatarain/bookshop/actions/workflows/pipeline.yml/badge.svg)](https://github.com/zatarain/bookshop/actions/workflows/pipeline.yml)
+# 🧑🏽‍💻 Project `bookshop` [![Continuous Integration Pipeline](https://github.com/zatarain/bookshop/actions/workflows/pipeline.yml/badge.svg)](https://github.com/zatarain/bookshop/actions/workflows/pipeline.yml) [![codecov](https://codecov.io/github/zatarain/bookshop/branch/main/graph/badge.svg?token=BQRBXEN0PR)](https://codecov.io/github/zatarain/bookshop)
 This project intents to be an example to use it as a playground for an API development of a book shop implemented in Golang.
 
 ## ☑️ Requirements
