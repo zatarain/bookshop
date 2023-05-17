@@ -28,14 +28,14 @@ func TestConnectToDatabase(test *testing.T) {
 		var capture bytes.Buffer
 		log.SetOutput(&capture)
 		monkey.Patch(gorm.Open, func(gorm.Dialector, ...gorm.Option) (*gorm.DB, error) {
-			return nil, errors.New("Failed to connect to database.")
+			return nil, errors.New("Failed to connect to database")
 		})
 
 		// Act
 		ConnectToDatabase()
 
 		// Assert
-		assert.Contains(capture.String(), "Failed to connect to database.")
+		assert.Contains(capture.String(), "Failed to connect to database")
 	})
 }
 

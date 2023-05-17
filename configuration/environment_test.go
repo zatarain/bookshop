@@ -48,7 +48,7 @@ func TestLoad(test *testing.T) {
 		log.SetOutput(&capture)
 		monkey.Patch(godotenv.Load, func(...string) error {
 			hasBeenCalled = true
-			return errors.New("Error while loading")
+			return errors.New("Failed to loading environment variables file")
 		})
 
 		// Act
@@ -56,7 +56,7 @@ func TestLoad(test *testing.T) {
 
 		// Assert
 		assert.Equal(true, hasBeenCalled)
-		assert.Contains(capture.String(), "Error loading environment variables file.")
+		assert.Contains(capture.String(), "Failed to loading environment variables file")
 
 		// Teardown
 		log.SetOutput(os.Stderr)

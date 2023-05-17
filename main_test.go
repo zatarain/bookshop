@@ -57,7 +57,7 @@ func TestMain(test *testing.T) {
 		log.SetOutput(&capture)
 		monkey.Patch(configuration.Setup, func(server gin.IRouter) {
 			monkey.PatchInstanceMethod(reflect.TypeOf(server), "Run", func(*gin.Engine, ...string) error {
-				return errors.New("Failed to start the server.")
+				return errors.New("Failed to start the server")
 			})
 		})
 
@@ -65,6 +65,6 @@ func TestMain(test *testing.T) {
 		main()
 
 		// Assert
-		assert.Contains(capture.String(), "Failed to start the server.")
+		assert.Contains(capture.String(), "Failed to start the server")
 	})
 }
