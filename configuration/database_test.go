@@ -27,13 +27,13 @@ func TestConnectToDatabase(test *testing.T) {
 
 	test.Run("Should connect to database and return generic SQL connection pointer", func(test *testing.T) {
 		// Arrange
-		database := &gorm.DB{}
+		dummy := &gorm.DB{}
 		monkey.Patch(gorm.Open, func(gorm.Dialector, ...gorm.Option) (*gorm.DB, error) {
-			return database, nil
+			return dummy, nil
 		})
 
 		expected := &sql.DB{}
-		monkey.PatchInstanceMethod(reflect.TypeOf(database), "DB", func(*gorm.DB) (*sql.DB, error) {
+		monkey.PatchInstanceMethod(reflect.TypeOf(dummy), "DB", func(*gorm.DB) (*sql.DB, error) {
 			return expected, nil
 		})
 
@@ -42,6 +42,7 @@ func TestConnectToDatabase(test *testing.T) {
 
 		// Assert
 		assert.Equal(expected, actual)
+		assert.Equal(dummy, Database)
 	})
 
 	test.Run("Should log a panic when failed to connect to database and return nil", func(test *testing.T) {
