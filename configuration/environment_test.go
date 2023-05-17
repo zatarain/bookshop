@@ -3,7 +3,6 @@ package configuration
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -33,8 +32,7 @@ func TestLoad(test *testing.T) {
 		Load()
 
 		// Assert
-		fmt.Println("filenames in Test:", filenames)
-		//assert.EqualValues([]string{"test.env"}, filenames)
+		assert.EqualValues([]string{"test.env"}, filenames)
 		assert.True(isLoaded)
 
 		// Teardown
