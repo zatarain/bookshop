@@ -3,6 +3,7 @@ package configuration
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -10,14 +11,20 @@ import (
 	"bou.ke/monkey"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/exp/slices"
 )
 
 func TestLoad(test *testing.T) {
 	assert := assert.New(test)
 	test.Run("Should load the environment with godotenv", func(test *testing.T) {
 		// Arrange
+		ENVIRONMENT := os.Getenv("ENVIRONMENT")
+		os.Setenv("ENVIRONMENT", "test")
 		isLoaded := false
-		monkey.Patch(godotenv.Load, func(...string) error {
+		var filenames []string
+
+		monkey.Patch(godotenv.Load, func(envfiles ...string) error {
+			filenames = slices.Clone(envfiles)
 			isLoaded = true
 			return nil
 		})
@@ -26,9 +33,12 @@ func TestLoad(test *testing.T) {
 		Load()
 
 		// Assert
+		fmt.Println("filenames in Test:", filenames)
+		//assert.EqualValues([]string{"test.env"}, filenames)
 		assert.True(isLoaded)
 
 		// Teardown
+		os.Setenv("ENVIRONMENT", ENVIRONMENT)
 		monkey.UnpatchAll()
 	})
 

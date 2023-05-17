@@ -7,6 +7,8 @@ import (
 
 func main() {
 	configuration.Load()
+	configuration.ConnectToDatabase()
+	configuration.MigrateDatabase()
 	server := gin.Default()
 	configuration.Setup(server)
 	server.Run()

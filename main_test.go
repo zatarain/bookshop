@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"reflect"
 	"testing"
 
@@ -17,6 +18,8 @@ func TestMain(test *testing.T) {
 
 	test.Run("Should run the service", func(test *testing.T) {
 		// Arrange
+		ENVIRONMENT := os.Getenv("ENVIRONMENT")
+		os.Setenv("ENVIRONMENT", "test")
 		environmentHasBeenLoaded := false
 		serverHasBeenSetup := false
 		serverIsRunning := false
@@ -38,5 +41,8 @@ func TestMain(test *testing.T) {
 		assert.True(environmentHasBeenLoaded)
 		assert.True(serverHasBeenSetup)
 		assert.True(serverIsRunning)
+
+		// Teardown
+		os.Setenv("ENVIRONMENT", ENVIRONMENT)
 	})
 }

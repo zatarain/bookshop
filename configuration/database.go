@@ -2,6 +2,7 @@ package configuration
 
 import (
 	"log"
+	"os"
 
 	"github.com/zatarain/bookshop/models"
 	"gorm.io/driver/sqlite"
@@ -10,8 +11,9 @@ import (
 
 var Database *gorm.DB
 
-func Connect() {
-	database, exception := gorm.Open(sqlite.Open("data/test.db"), &gorm.Config{})
+func ConnectToDatabase() {
+	dialector := sqlite.Open(os.Getenv("DATABASE"))
+	database, exception := gorm.Open(dialector, &gorm.Config{})
 	if exception != nil {
 		log.Panic("Failed to connect to the database.")
 	}
@@ -19,6 +21,6 @@ func Connect() {
 	Database = database
 }
 
-func Migrate() {
+func MigrateDatabase() {
 	Database.AutoMigrate(&models.Book{})
 }
