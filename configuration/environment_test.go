@@ -32,10 +32,10 @@ func TestLoad(test *testing.T) {
 		monkey.UnpatchAll()
 	})
 
-	test.Run("Should log the error as fatal while trying to load the environment", func(test *testing.T) {
+	test.Run("Should log the error as panic while trying to load the environment", func(test *testing.T) {
 		// Arrange
 		hasBeenCalled := false
-		monkey.Patch(log.Fatal, log.Print)
+		monkey.Patch(log.Panic, log.Print)
 		var capture bytes.Buffer
 		log.SetOutput(&capture)
 		monkey.Patch(godotenv.Load, func(...string) error {
