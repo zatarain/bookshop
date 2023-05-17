@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type User struct {
+type Book struct {
 	gorm.Model
 	ID        uint      `json:"id" gorm:"primary_key"`
 	Title     string    `json:"title"`
