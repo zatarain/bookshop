@@ -19,6 +19,7 @@ func TestMain(test *testing.T) {
 	os.Setenv("ENVIRONMENT", "test")
 	assert := assert.New(test)
 	gin.SetMode(gin.TestMode)
+	monkey.Patch(log.Panic, log.Print)
 
 	// Teardown test suite
 	defer monkey.UnpatchAll()
@@ -52,7 +53,6 @@ func TestMain(test *testing.T) {
 
 	test.Run("Should log panic when failed to run server", func(test *testing.T) {
 		// Arrange
-		monkey.Patch(log.Panic, log.Print)
 		var capture bytes.Buffer
 		log.SetOutput(&capture)
 		monkey.Patch(configuration.Setup, func(server gin.IRouter) {

@@ -1,6 +1,7 @@
 package configuration
 
 import (
+	"database/sql"
 	"log"
 	"os"
 
@@ -11,14 +12,22 @@ import (
 
 var Database *gorm.DB
 
-func ConnectToDatabase() {
+func ConnectToDatabase() *sql.DB {
 	dialector := sqlite.Open(os.Getenv("DATABASE"))
 	database, exception := gorm.Open(dialector, &gorm.Config{})
 	if exception != nil {
-		log.Panic("Failed to connect to the database.")
+		log.Panic("Failed to connect to the database.", exception.Error())
+		return nil
+	}
+
+	connection, exception := database.DB()
+	if exception != nil {
+		log.Panic("Failed to get generic SQL connection pointer.", exception.Error())
+		return nil
 	}
 
 	Database = database
+	return connection
 }
 
 func MigrateDatabase() {
