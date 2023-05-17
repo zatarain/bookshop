@@ -25,11 +25,8 @@ func TestConnectToDatabase(test *testing.T) {
 	defer log.SetOutput(os.Stderr)
 	defer os.Setenv("ENVIRONMENT", ENVIRONMENT)
 
-	test.Run("Should log a panic when failed to connect to database", func(test *testing.T) {
+	test.Run("Should connect to database and return generic SQL connection pointer", func(test *testing.T) {
 		// Arrange
-		var capture bytes.Buffer
-		log.SetOutput(&capture)
-
 		database := &gorm.DB{}
 		monkey.Patch(gorm.Open, func(gorm.Dialector, ...gorm.Option) (*gorm.DB, error) {
 			return database, nil
@@ -47,7 +44,7 @@ func TestConnectToDatabase(test *testing.T) {
 		assert.Equal(expected, actual)
 	})
 
-	test.Run("Should log a panic when failed to connect to database", func(test *testing.T) {
+	test.Run("Should log a panic when failed to connect to database and return nil", func(test *testing.T) {
 		// Arrange
 		var capture bytes.Buffer
 		log.SetOutput(&capture)
@@ -60,6 +57,28 @@ func TestConnectToDatabase(test *testing.T) {
 
 		// Assert
 		assert.Contains(capture.String(), "Failed to connect to database")
+		assert.Nil(actual)
+	})
+
+	test.Run("Should return nil when failed to get the generic SQL connection pointer", func(test *testing.T) {
+		// Arrange
+		var capture bytes.Buffer
+		log.SetOutput(&capture)
+
+		database := &gorm.DB{}
+		monkey.Patch(gorm.Open, func(gorm.Dialector, ...gorm.Option) (*gorm.DB, error) {
+			return database, nil
+		})
+
+		monkey.PatchInstanceMethod(reflect.TypeOf(database), "DB", func(*gorm.DB) (*sql.DB, error) {
+			return nil, errors.New("Failed to get SQL connection pointer")
+		})
+
+		// Act
+		actual := ConnectToDatabase()
+
+		// Assert
+		assert.Contains(capture.String(), "Failed to get SQL connection pointer")
 		assert.Nil(actual)
 	})
 }
