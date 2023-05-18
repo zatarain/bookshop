@@ -283,12 +283,25 @@ func TestLogin(test *testing.T) {
 func TestAuthorise(test *testing.T) {
 	assert := assert.New(test)
 	gin.SetMode(gin.TestMode)
+	today := time.Now()
+	dummy := models.User{
+		ID:        12345,
+		Nickname:  "dummy-user",
+		Password:  "top-secret",
+		CreatedAt: today,
+		UpdatedAt: today,
+	}
 
-	testMiddlewareRequest := func(server *gin.Engine) *httptest.ResponseRecorder {
-		request, _ := http.NewRequest("GET", "/", nil)
-		recorder := httptest.NewRecorder()
-		server.ServeHTTP(recorder, request)
-		return recorder
+	AuthorisedEndPointHandler := func(context *gin.Context) {
+		data, exists := context.Get("user")
+		user := data.(*models.User)
+
+		assert.True(exists)
+		assert.Equal(&dummy, user)
+	}
+
+	UnauthorisedEndPointHandler := func(*gin.Context) {
+		assert.False(true, "This should never run otherwise the test failed!")
 	}
 
 	// Teardown test suite
@@ -299,22 +312,37 @@ func TestAuthorise(test *testing.T) {
 		server := gin.New()
 		database := new(mocks.MockedDataAccessInterface)
 		users := &UsersController{Database: database}
-		server.GET("/", users.Authorise)
+		server.GET("/", users.Authorise, AuthorisedEndPointHandler)
 		monkey.PatchInstanceMethod(reflect.TypeOf(users), "ValidateToken", func(*UsersController, *gin.Context) (*models.User, error) {
-			today := time.Now()
-			return &models.User{
-				ID:        12345,
-				Nickname:  "dummy-user",
-				Password:  "top-secret",
-				CreatedAt: today,
-				UpdatedAt: today,
-			}, nil
+			return &dummy, nil
 		})
+		request, _ := http.NewRequest("GET", "/", nil)
+		recorder := httptest.NewRecorder()
 
 		// Act
-		recorder := testMiddlewareRequest(server)
+		server.ServeHTTP(recorder, request)
 
 		// Assert
 		assert.Equal(http.StatusOK, recorder.Code)
+	})
+
+	test.Run("Should set the user within the context and continue when token is valid", func(test *testing.T) {
+		// Arrange
+		server := gin.New()
+		database := new(mocks.MockedDataAccessInterface)
+		users := &UsersController{Database: database}
+		server.GET("/", users.Authorise, UnauthorisedEndPointHandler)
+		monkey.PatchInstanceMethod(reflect.TypeOf(users), "ValidateToken", func(*UsersController, *gin.Context) (*models.User, error) {
+			return nil, errors.New("Invalid token")
+		})
+		request, _ := http.NewRequest("GET", "/", nil)
+		recorder := httptest.NewRecorder()
+
+		// Act
+		server.ServeHTTP(recorder, request)
+
+		// Assert
+		assert.Equal(http.StatusUnauthorized, recorder.Code)
+		assert.Contains(recorder.Body.String(), "Invalid token")
 	})
 }
