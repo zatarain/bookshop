@@ -122,7 +122,7 @@ func (users *UsersController) Login(context *gin.Context) {
 
 	// Generate JWT Token and send it in the Cookies
 	generateTokenAndCookie(context, user.Nickname)
-	context.JSON(http.StatusOK, gin.H{"summary": "Yaaay! You are logged In :)"})
+	context.JSON(http.StatusOK, gin.H{"summary": "Yaaay! You are logged in :)"})
 }
 
 func (users *UsersController) Authorise(context *gin.Context) {
