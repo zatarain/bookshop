@@ -93,5 +93,6 @@ func TestSignup(test *testing.T) {
 		// Assert
 		assert.Equal(http.StatusBadRequest, recorder.Code)
 		assert.Contains(recorder.Body.String(), "Failed to read input")
+		database.AssertNotCalled(test, "Create", mock.AnythingOfType("*models.User"))
 	})
 }
