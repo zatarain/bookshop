@@ -22,6 +22,14 @@ type UsersController struct {
 	SecretTokenKey string
 }
 
+type TokenMaker interface {
+	NewToken(*gin.Context, *models.User) (string, error)
+}
+
+type Authoriser interface {
+	ValidateToken(*gin.Context) (*models.User, error)
+}
+
 func (credentials *Credentials) HashPassword() error {
 	hash, exception := bcrypt.GenerateFromPassword([]byte(credentials.Password), bcrypt.DefaultCost)
 	credentials.Password = string(hash)
@@ -78,15 +86,13 @@ func (users *UsersController) Signup(context *gin.Context) {
 	})
 }
 
-func (users *UsersController) generateToken(context *gin.Context, nickname string) (string, error) {
-	// Create the token
-	token := jwt.NewWithClaims(
-		jwt.SigningMethodHS256,
-		jwt.MapClaims{
-			"nickname":   nickname,
-			"expiration": time.Now().Add(7 * 24 * time.Hour).Unix(),
-		},
-	)
+func (users *UsersController) NewToken(context *gin.Context, user *models.User) (string, error) {
+	// Create the token for user that last for 7 days
+	data := jwt.MapClaims{
+		"identifier": user.Nickname,
+		"expiration": time.Now().Add(7 * 24 * time.Hour).Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, data)
 
 	// Signing the token with secret key
 	return token.SignedString([]byte(users.SecretTokenKey))
@@ -99,8 +105,8 @@ func (users *UsersController) Login(context *gin.Context) {
 	}
 
 	// Checking the credentials
-	var user models.User
-	users.Database.First(&user, "nickname = ?", credentials.Nickname)
+	user := &models.User{}
+	users.Database.First(user, "nickname = ?", credentials.Nickname)
 	failed := bcrypt.CompareHashAndPassword(
 		[]byte(user.Password),
 		[]byte(credentials.Password),
@@ -113,7 +119,7 @@ func (users *UsersController) Login(context *gin.Context) {
 	}
 
 	// Generate JWT Token and send it in the Cookies
-	token, exception := users.generateToken(context, user.Nickname)
+	token, exception := users.NewToken(context, user)
 	if exception != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{
 			"summary": "Unable to generate access token",
@@ -135,7 +141,7 @@ func (users *UsersController) decoder(token *jwt.Token) (interface{}, error) {
 	return []byte(users.SecretTokenKey), nil
 }
 
-func (users *UsersController) validateToken(context *gin.Context) (*models.User, error) {
+func (users *UsersController) ValidateToken(context *gin.Context) (*models.User, error) {
 	// Retrieving the Authorisation cookie
 	cookie, exception := context.Cookie("Authorisation")
 	if exception != nil {
@@ -155,15 +161,14 @@ func (users *UsersController) validateToken(context *gin.Context) (*models.User,
 	}
 
 	// Checking expiration date/time
-	now := float64(time.Now().Unix())
-	expiration := claims["expiration"].(float64)
-	if now > expiration {
+	expiration := claims["expiration"].(int64)
+	if time.Now().Unix() > expiration {
 		return nil, errors.New("expired session")
 	}
 
 	// Looking for the user nickname
 	user := &models.User{}
-	users.Database.First(user, "nickname = ?", claims["nickname"].(string))
+	users.Database.First(user, "nickname = ?", claims["identifier"].(string))
 	if user.ID == 0 {
 		return nil, errors.New("user not found")
 	}
@@ -172,7 +177,7 @@ func (users *UsersController) validateToken(context *gin.Context) (*models.User,
 }
 
 func (users *UsersController) Authorise(context *gin.Context) {
-	user, exception := users.validateToken(context)
+	user, exception := users.ValidateToken(context)
 	if exception != nil {
 		context.AbortWithStatusJSON(
 			http.StatusUnauthorized,

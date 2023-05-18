@@ -6,7 +6,9 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
+	"time"
 
 	"bou.ke/monkey"
 	"github.com/gin-gonic/gin"
@@ -282,24 +284,37 @@ func TestAuthorise(test *testing.T) {
 	assert := assert.New(test)
 	gin.SetMode(gin.TestMode)
 
-	testMiddlewareRequest := func(server *gin.Engine, expectedCode int) {
+	testMiddlewareRequest := func(server *gin.Engine) *httptest.ResponseRecorder {
 		request, _ := http.NewRequest("GET", "/", nil)
 		recorder := httptest.NewRecorder()
 		server.ServeHTTP(recorder, request)
-		assert.Equal(expectedCode, recorder.Code)
+		return recorder
 	}
 
 	// Teardown test suite
 	defer monkey.UnpatchAll()
 
-	test.Run("", func(test *testing.T) {
+	test.Run("Should set the user within the context and continue when token is valid", func(test *testing.T) {
 		// Arrange
 		server := gin.New()
+		database := new(mocks.MockedDataAccessInterface)
+		users := &UsersController{Database: database}
+		server.GET("/", users.Authorise)
+		monkey.PatchInstanceMethod(reflect.TypeOf(users), "ValidateToken", func(*UsersController, *gin.Context) (*models.User, error) {
+			today := time.Now()
+			return &models.User{
+				ID:        12345,
+				Nickname:  "dummy-user",
+				Password:  "top-secret",
+				CreatedAt: today,
+				UpdatedAt: today,
+			}, nil
+		})
 
 		// Act
-		testMiddlewareRequest(server, http.StatusOK)
+		recorder := testMiddlewareRequest(server)
 
 		// Assert
-		assert.True(true)
+		assert.Equal(http.StatusOK, recorder.Code)
 	})
 }
