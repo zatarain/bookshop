@@ -11,9 +11,12 @@ func TestSetup(test *testing.T) {
 	test.Run("Should setup all the end-points", func(test *testing.T) {
 		// Arrange
 		server := new(mocks.MockedEngine)
-		server.On("HEAD", "/health", mock.AnythingOfType("gin.HandlerFunc")).Return(server)
-		server.On("GET", "/books", mock.AnythingOfType("gin.HandlerFunc")).Return(server)
-		server.On("POST", "/signup", mock.AnythingOfType("gin.HandlerFunc")).Return(server)
+		endPointHandler := mock.AnythingOfType("gin.HandlerFunc")
+		autorisationHandler := mock.AnythingOfType("gin.HandlerFunc")
+		server.On("HEAD", "/health", endPointHandler).Return(server)
+		server.On("POST", "/signup", endPointHandler).Return(server)
+		server.On("POST", "/login", endPointHandler).Return(server)
+		server.On("GET", "/books", autorisationHandler, endPointHandler).Return(server)
 
 		// Act
 		Setup(server)
