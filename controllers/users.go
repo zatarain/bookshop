@@ -17,17 +17,17 @@ type UsersController struct {
 	Database models.DataAccessInterface
 }
 
-func HashPassword(password string) (string, error) {
-	hash, exception := bcrypt.GenerateFromPassword([]byte(password), 10)
-	return string(hash), exception
+func (credentials *Credentials) HashPassword() error {
+	hash, exception := bcrypt.GenerateFromPassword([]byte(credentials.Password), 10)
+	credentials.Password = string(hash)
+	return exception
 }
 
 func (users *UsersController) Signup(context *gin.Context) {
 	var credentials Credentials
 
 	// Trying to bind input from JSON
-	binding := context.BindJSON(&credentials)
-	if binding != nil {
+	if binding := context.BindJSON(&credentials); binding != nil {
 		context.JSON(http.StatusBadRequest, gin.H{
 			"summary": "Failed to read input",
 			"details": binding.Error(),
@@ -36,10 +36,9 @@ func (users *UsersController) Signup(context *gin.Context) {
 	}
 
 	// Trying to crete a hash for password
-	hash, exception := HashPassword(credentials.Password)
-	if exception != nil {
+	if exception := credentials.HashPassword(); exception != nil {
 		context.JSON(http.StatusBadRequest, gin.H{
-			"summary": "Failed to create the hash",
+			"summary": "Failed to create the hash for password",
 			"details": exception.Error(),
 		})
 		return
@@ -48,7 +47,7 @@ func (users *UsersController) Signup(context *gin.Context) {
 	// Insert user into the database table users
 	user := models.User{
 		Nickname: credentials.Nickname,
-		Password: hash,
+		Password: credentials.Password,
 	}
 	inserting := users.Database.Create(&user).Error
 	if inserting != nil {
