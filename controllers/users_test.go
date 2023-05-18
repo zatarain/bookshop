@@ -178,4 +178,26 @@ func TestLogin(test *testing.T) {
 		assert.Contains(recorder.Body.String(), "Yaaay! You are logged in :)")
 		database.AssertExpectations(test)
 	})
+
+	test.Run("Should NOT try to login the user when unable to bind JSON", func(test *testing.T) {
+		// Arrange
+		server := gin.New()
+		database := new(mocks.MockedDataAccessInterface)
+		users := &UsersController{Database: database}
+		database.
+			On("First", mock.AnythingOfType("*models.User")).
+			Return(&gorm.DB{Error: nil})
+		server.POST("/login", users.Login)
+		body := bytes.NewBuffer([]byte("Malformed JSON"))
+		request, _ := http.NewRequest(http.MethodPost, "/login", body)
+		recorder := httptest.NewRecorder()
+
+		// Act
+		server.ServeHTTP(recorder, request)
+
+		// Assert
+		assert.Equal(http.StatusBadRequest, recorder.Code)
+		assert.Contains(recorder.Body.String(), "Failed to read input")
+		database.AssertNotCalled(test, "First", mock.AnythingOfType("*models.User"))
+	})
 }
