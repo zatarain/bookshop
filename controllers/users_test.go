@@ -280,3 +280,29 @@ func TestLogin(test *testing.T) {
 		})
 	}
 }
+
+func TestAuthorise(test *testing.T) {
+	assert := assert.New(test)
+	gin.SetMode(gin.TestMode)
+
+	testMiddlewareRequest := func(server *gin.Engine, expectedCode int) {
+		request, _ := http.NewRequest("GET", "/", nil)
+		recorder := httptest.NewRecorder()
+		server.ServeHTTP(recorder, request)
+		assert.Equal(expectedCode, recorder.Code)
+	}
+
+	// Teardown test suite
+	defer monkey.UnpatchAll()
+
+	test.Run("", func(test *testing.T) {
+		// Arrange
+		server := gin.New()
+
+		// Act
+		testMiddlewareRequest(server, http.StatusOK)
+
+		// Assert
+		assert.True(true)
+	})
+}

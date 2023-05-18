@@ -1,12 +1,13 @@
 package controllers
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/zatarain/bookshop/models"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -17,7 +18,8 @@ type Credentials struct {
 }
 
 type UsersController struct {
-	Database models.DataAccessInterface
+	Database       models.DataAccessInterface
+	SecretTokenKey string
 }
 
 func (credentials *Credentials) HashPassword() error {
@@ -76,28 +78,18 @@ func (users *UsersController) Signup(context *gin.Context) {
 	})
 }
 
-func generateTokenAndCookie(context *gin.Context, nickname string) {
+func (users *UsersController) generateToken(context *gin.Context, nickname string) (string, error) {
 	// Create the token
 	token := jwt.NewWithClaims(
 		jwt.SigningMethodHS256,
 		jwt.MapClaims{
-			"sub": nickname,
-			"exp": time.Now().Add(7 * 24 * time.Hour).Unix(),
+			"nickname":   nickname,
+			"expiration": time.Now().Add(7 * 24 * time.Hour).Unix(),
 		},
 	)
 
 	// Signing the token with secret key
-	signedToken, exception := token.SignedString(os.Getenv("SECRET_TOKEN_KEY"))
-	if exception != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{
-			"summary": "Unable to generate access token",
-			"details": exception.Error(),
-		})
-	}
-
-	// Send cookie to the client
-	context.SetSameSite(http.SameSiteLaxMode)
-	context.SetCookie("Authorisation", signedToken, 7*24*60*60, "", "", false, true)
+	return token.SignedString([]byte(users.SecretTokenKey))
 }
 
 func (users *UsersController) Login(context *gin.Context) {
@@ -121,10 +113,77 @@ func (users *UsersController) Login(context *gin.Context) {
 	}
 
 	// Generate JWT Token and send it in the Cookies
-	generateTokenAndCookie(context, user.Nickname)
+	token, exception := users.generateToken(context, user.Nickname)
+	if exception != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{
+			"summary": "Unable to generate access token",
+			"details": exception.Error(),
+		})
+		return
+	}
+
+	// Send cookie to the client
+	context.SetSameSite(http.SameSiteLaxMode)
+	context.SetCookie("Authorisation", token, 7*24*60*60, "", "", false, true)
 	context.JSON(http.StatusOK, gin.H{"summary": "Yaaay! You are logged in :)"})
 }
 
+func (users *UsersController) decoder(token *jwt.Token) (interface{}, error) {
+	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+		return nil, fmt.Errorf("wrong signing method: %v", token.Header["alg"])
+	}
+	return []byte(users.SecretTokenKey), nil
+}
+
+func (users *UsersController) validateToken(context *gin.Context) (*models.User, error) {
+	// Retrieving the Authorisation cookie
+	cookie, exception := context.Cookie("Authorisation")
+	if exception != nil {
+		return nil, exception
+	}
+
+	// Decoding the token using the secret key
+	token, exception := jwt.Parse(cookie, users.decoder)
+	if exception != nil {
+		return nil, exception
+	}
+
+	// Validating token consistentcy and retrieving the claims
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !(ok && token.Valid) {
+		return nil, errors.New("invalid authentication token")
+	}
+
+	// Checking expiration date/time
+	now := float64(time.Now().Unix())
+	expiration := claims["expiration"].(float64)
+	if now > expiration {
+		return nil, errors.New("expired session")
+	}
+
+	// Looking for the user nickname
+	user := &models.User{}
+	users.Database.First(user, "nickname = ?", claims["nickname"].(string))
+	if user.ID == 0 {
+		return nil, errors.New("user not found")
+	}
+
+	return user, nil
+}
+
 func (users *UsersController) Authorise(context *gin.Context) {
+	user, exception := users.validateToken(context)
+	if exception != nil {
+		context.AbortWithStatusJSON(
+			http.StatusUnauthorized,
+			gin.H{
+				"summary": "Unauthorised",
+				"details": exception.Error(),
+			},
+		)
+	}
+
+	// Attach user to context, allow access and continue
+	context.Set("user", user)
 	context.Next()
 }
