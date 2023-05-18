@@ -1,4 +1,6 @@
-# 🧑🏽‍💻 Project `bookshop` [![Continuous Integration Pipeline](https://github.com/zatarain/bookshop/actions/workflows/pipeline.yml/badge.svg)](https://github.com/zatarain/bookshop/actions/workflows/pipeline.yml) [![codecov](https://codecov.io/github/zatarain/bookshop/branch/main/graph/badge.svg?token=BQRBXEN0PR)](https://codecov.io/github/zatarain/bookshop)
+# 🧑🏽‍💻 Project `bookshop`
+[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause) [![Continuous Integration Pipeline](https://github.com/zatarain/bookshop/actions/workflows/pipeline.yml/badge.svg)](https://github.com/zatarain/bookshop/actions/workflows/pipeline.yml) [![codecov](https://codecov.io/github/zatarain/bookshop/branch/main/graph/badge.svg?token=BQRBXEN0PR)](https://codecov.io/github/zatarain/bookshop) [![Go Report Card](https://goreportcard.com/badge/github.com/zatarain/bookshop)](https://goreportcard.com/report/github.com/zatarain/bookshop)
+
 This project intents to be an example to use it as a playground for an API development of a book shop implemented in Golang.
 
 ## ☑️ Requirements
@@ -13,15 +15,15 @@ The API should be able to manage a database for the books in the store. Allowing
 ## 📚 Books
 That database should have a table that contains following data:
 
-| Name       |     Type      | Description                                 |
-| :---       |    :----:     | :---                                        |
-| `id`       | `INT(10)`     | Autonumeric identifier for the book         |
-| `title`    | `VARCHAR(30)` | Title of the book                           |
-| `author`   | `VARCHAR(30)` | Author of the book                          |
-| `price`    | `DOUBLE`      | Price of the book                           |
-| `quantity` | `INT(5)`      | Amount of book copies in the store          |
-| `created`  | `DATETIME`    | Timestamp representing the creation time    |
-| `updated`  | `DATETIME`    | Timestamp representing the last update time |
+| Name          |     Type      | Description                                 |
+| :---          |    :----:     | :---                                        |
+| `id`          | `INT(10)`     | Autonumeric identifier for the book         |
+| `title`       | `VARCHAR(30)` | Title of the book                           |
+| `author`      | `VARCHAR(30)` | Author of the book                          |
+| `price`       | `DOUBLE`      | Price of the book                           |
+| `quantity`    | `INT(5)`      | Amount of book copies in the store          |
+| `created_at`  | `DATETIME`    | Timestamp representing the creation time    |
+| `updated_at`  | `DATETIME`    | Timestamp representing the last update time |
 
 ## 📐 Design
 The architecture will be a HTTP microservice that will consume some configuration and use ORM to represent the records in the database tables and also a Model-Controller (MC) pattern design, so the controllers will contain the handlers for the API requests, while the models will manage the data and connect to the database.
@@ -35,8 +37,8 @@ class Book {
 	Author string
 	Price double
 	Quantity int
-	Created time
-	Updated time
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 class BooksController {
@@ -68,13 +70,12 @@ class Server {
 	main()
 }
 
-Book *-- BooksController : uses
-Database *-- Book: connects to
-Configuration *-- Server: consumes
-Server --o BooksController: maps/routes to
+Book --* BooksController : uses
+Database --* Book: connects to
+Configuration --* Server: consumes
+Server o-- BooksController: maps/routes to
 AppController <|-- BooksController
 Model <|-- Book
-
 ```
 
 ## 🏗️ Implementation details
@@ -84,7 +85,7 @@ We are using following libraries for the implementation:
  * **`gin-gonic`.** A web framework to implement a RESTful API via HTTP.
  * **`gorm`.** A library for Object Relational Model (ORM) in order to represent the records in the database as relational objects.
  * **`gorm` SQLite driver.** The database is a local storage implementing `SQLite`, so we need a wait to connect to it.
- * **`godotenv`.** This library allows us to load environment configuration via `.env` files.
+ * **`godotenv`.** This CLI tool allows us to load environment configuration via `.env` files and run a command.
  * **`crypto/bcrypt`.** To make use of `base64` encoding and decoding for the authentication token.
  * **`golang-jwt`.** To generate and use JSON Web Tokens (JWT) for authentication and authorisation.
 

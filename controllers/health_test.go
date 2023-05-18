@@ -13,7 +13,7 @@ import (
 func TestHealth(test *testing.T) {
 	assert := assert.New(test)
 	gin.SetMode(gin.TestMode)
-	server := gin.Default()
+	server := gin.New()
 	server.HEAD("/health", HealthCheck)
 	recorder := httptest.NewRecorder()
 
