@@ -15,8 +15,6 @@ import (
 )
 
 func TestMain(test *testing.T) {
-	ENVIRONMENT := os.Getenv("ENVIRONMENT")
-	os.Setenv("ENVIRONMENT", "test")
 	assert := assert.New(test)
 	gin.SetMode(gin.TestMode)
 	monkey.Patch(log.Panic, log.Print)
@@ -24,16 +22,11 @@ func TestMain(test *testing.T) {
 	// Teardown test suite
 	defer monkey.UnpatchAll()
 	defer log.SetOutput(os.Stderr)
-	defer os.Setenv("ENVIRONMENT", ENVIRONMENT)
 
 	test.Run("Should run the service", func(test *testing.T) {
 		// Arrange
-		environmentHasBeenLoaded := false
 		serverHasBeenSetup := false
 		serverIsRunning := false
-		monkey.Patch(configuration.Load, func() {
-			environmentHasBeenLoaded = true
-		})
 		monkey.Patch(configuration.Setup, func(server gin.IRouter) {
 			serverHasBeenSetup = true
 			monkey.PatchInstanceMethod(reflect.TypeOf(server), "Run", func(*gin.Engine, ...string) error {
@@ -46,7 +39,6 @@ func TestMain(test *testing.T) {
 		main()
 
 		// Assert
-		assert.True(environmentHasBeenLoaded)
 		assert.True(serverHasBeenSetup)
 		assert.True(serverIsRunning)
 	})

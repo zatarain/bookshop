@@ -11,19 +11,17 @@ import (
 
 	"bou.ke/monkey"
 	"github.com/stretchr/testify/assert"
+	"github.com/zatarain/bookshop/models"
 	"gorm.io/gorm"
 )
 
 func TestConnectToDatabase(test *testing.T) {
-	ENVIRONMENT := os.Getenv("ENVIRONMENT")
-	os.Setenv("ENVIRONMENT", "test")
 	assert := assert.New(test)
 	monkey.Patch(log.Panic, log.Print)
 
 	// Teardown test suite
 	defer monkey.UnpatchAll()
 	defer log.SetOutput(os.Stderr)
-	defer os.Setenv("ENVIRONMENT", ENVIRONMENT)
 
 	test.Run("Should connect to database and return generic SQL connection pointer", func(test *testing.T) {
 		// Arrange
@@ -85,5 +83,29 @@ func TestConnectToDatabase(test *testing.T) {
 }
 
 func TestMigrateDatabase(test *testing.T) {
-	// Database.AutoMigrate(&models.Book{})
+	assert := assert.New(test)
+	monkey.Patch(log.Panic, log.Print)
+
+	// Teardown test suite
+	defer monkey.UnpatchAll()
+	defer log.SetOutput(os.Stderr)
+
+	test.Run("Should connect to database and return generic SQL connection pointer", func(test *testing.T) {
+		// Arrange
+		ConnectToDatabase()
+
+		// Act
+		MigrateDatabase()
+
+		// Assert
+		Database.Create(&models.Book{
+			Title:    "dummy book",
+			Author:   "dummy author",
+			Price:    100,
+			Quantity: 4,
+		})
+		var book models.Book
+		Database.Find(&book, 1)
+		assert.Equal(book.Title, "dummy book")
+	})
 }

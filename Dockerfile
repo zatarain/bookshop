@@ -1,6 +1,11 @@
 FROM golang:1.20.4
-WORKDIR /api
+
+ENV MODNAME=github.com/zatarain/bookshop
+ENV MODPATH="$GOPATH/src/$MODNAME"
+WORKDIR ${MODPATH}
 COPY . .
+
+RUN go install github.com/joho/godotenv/cmd/godotenv@latest
 RUN go mod tidy
-RUN go test -v ./...
-CMD ["go", "run", "main.go"]
+RUN ENVIRONMENT=test godotenv -f "${ENVIRONMENT}.env" go test -v ./...
+CMD godotenv -f ${ENVIRONMENT}.env go run main.go

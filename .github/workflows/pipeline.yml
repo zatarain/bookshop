@@ -7,8 +7,10 @@ on:
     types: [opened, synchronize]
   
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: test
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -23,6 +25,7 @@ jobs:
           go mod tidy
           go get -u golang.org/x/lint/golint
           go install golang.org/x/lint/golint
+          go install github.com/joho/godotenv/cmd/godotenv@latest
       - name: Run Vet & Lint
         run: |
           go vet .
@@ -30,12 +33,12 @@ jobs:
       - name: Build
         run: go build .
       - name: Run test cases with coverage
-        run: go test -v -coverprofile=coverage.txt -covermode=atomic ./...
+        run: godotenv -f "$ENVIRONMENT.env" go test -v -coverprofile=coverage.txt -covermode=atomic ./...
       - name: Upload coverage report to CodeCov 
         uses: codecov/codecov-action@v3
               
   deploy:
-    needs: [build]
+    needs: [build-and-test]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

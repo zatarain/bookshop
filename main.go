@@ -8,9 +8,6 @@ import (
 )
 
 func main() {
-	// Load Environment Variables
-	configuration.Load()
-
 	// Connect to Database
 	connection := configuration.ConnectToDatabase()
 	defer connection.Close()

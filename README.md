@@ -85,7 +85,7 @@ We are using following libraries for the implementation:
  * **`gin-gonic`.** A web framework to implement a RESTful API via HTTP.
  * **`gorm`.** A library for Object Relational Model (ORM) in order to represent the records in the database as relational objects.
  * **`gorm` SQLite driver.** The database is a local storage implementing `SQLite`, so we need a wait to connect to it.
- * **`godotenv`.** This library allows us to load environment configuration via `.env` files.
+ * **`godotenv`.** This CLI tool allows us to load environment configuration via `.env` files and run a command.
  * **`crypto/bcrypt`.** To make use of `base64` encoding and decoding for the authentication token.
  * **`golang-jwt`.** To generate and use JSON Web Tokens (JWT) for authentication and authorisation.
 

@@ -13,7 +13,7 @@ import (
 func TestGetBooks(test *testing.T) {
 	assert := assert.New(test)
 	gin.SetMode(gin.TestMode)
-	server := gin.Default()
+	server := gin.New()
 	server.HEAD("/books", GetBooks)
 	recorder := httptest.NewRecorder()
 
