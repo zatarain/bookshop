@@ -14,6 +14,7 @@ var Database *gorm.DB
 
 func ConnectToDatabase() *sql.DB {
 	filename := os.ExpandEnv("$GOPATH/src/$MODNAME/$DATABASE")
+	log.Println("Database filename: ", filename)
 	dialector := sqlite.Open(filename)
 	database, exception := gorm.Open(dialector, &gorm.Config{})
 	if exception != nil {

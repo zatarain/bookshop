@@ -11,18 +11,43 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENVIRONMENT: test
+      GOPATH: ${{ github.workspace }}/go
       MODNAME: github.com/${{ github.repository }}
+      MODPATH: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
+      - name: Env before checkout
+        run: |
+          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+          echo "github.workspace"=${{ github.workspace }}
+          echo "GOPATH=$GOPATH"
+          echo "ENVIRONMENT=$ENVIRONMENT"
+          echo "MODNAME=$MODNAME"
+          echo "MODPATH=$MODPATH"
+          echo "Potential.EnvFile=$MODPATH/$ENVIRONMENT.env"
+          echo "PotentialDatabaseFile=$MODPATH/data/$ENVIRONMENT.db"
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          path: go/src/github.com/${{ github.repository }}
       - name: Installing go
         uses: actions/setup-go@v4
         with:
           go-version: '^1.20.0'
+      - name: Env after checkout and go installation
+        run: |
+          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+          echo "github.workspace"=${{ github.workspace }}
+          echo "GOPATH=$GOPATH"
+          echo "ENVIRONMENT=$ENVIRONMENT"
+          echo "MODNAME=$MODNAME"
+          echo "MODPATH=$MODPATH"
+          echo "Potential.EnvFile=$MODPATH/$ENVIRONMENT.env"
+          echo "PotentialDatabaseFile=$MODPATH/data/$ENVIRONMENT.db"
+          go env
+          pwd
       - name: Installing dependencies
         run: |
+          pwd
           go mod tidy
           go get -u golang.org/x/lint/golint
           go install golang.org/x/lint/golint
@@ -44,8 +69,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
