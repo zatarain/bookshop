@@ -13,6 +13,7 @@ jobs:
       ENVIRONMENT: test
       MODNAME: github.com/${{ github.repository }}
       MODPATH: ${{ github.workspace }}
+      GOMOD: ${{ github.workspace }}/go.mod
     steps:
       - name: Env before checkout
         run: |
@@ -22,6 +23,7 @@ jobs:
           echo "ENVIRONMENT=$ENVIRONMENT"
           echo "MODNAME=$MODNAME"
           echo "MODPATH=$MODPATH"
+          echo "GOMOD=$GOMOD"
           echo "Potential.EnvFile=$MODPATH/$ENVIRONMENT.env"
           echo "PotentialDatabaseFile=$MODPATH/data/$ENVIRONMENT.db"
       - name: Checkout
@@ -38,6 +40,7 @@ jobs:
           echo "ENVIRONMENT=$ENVIRONMENT"
           echo "MODNAME=$MODNAME"
           echo "MODPATH=$MODPATH"
+          echo "GOMOD=$GOMOD"
           echo "Potential.EnvFile=$MODPATH/$ENVIRONMENT.env"
           echo "PotentialDatabaseFile=$MODPATH/data/$ENVIRONMENT.db"
           go env
