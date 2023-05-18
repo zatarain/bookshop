@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENVIRONMENT: test
+      MODNAME: github.com/${{ github.repository }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
