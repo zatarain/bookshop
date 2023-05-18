@@ -11,9 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENVIRONMENT: test
-      GOPATH: ${{ github.workspace }}/go
       MODNAME: github.com/${{ github.repository }}
-      MODPATH: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
+      MODPATH: ${{ github.workspace }}
     steps:
       - name: Env before checkout
         run: |
@@ -27,8 +26,6 @@ jobs:
           echo "PotentialDatabaseFile=$MODPATH/data/$ENVIRONMENT.db"
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          path: go/src/github.com/${{ github.repository }}
       - name: Installing go
         uses: actions/setup-go@v4
         with:

@@ -2,8 +2,10 @@ package configuration
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
+	"path"
 
 	"github.com/zatarain/bookshop/models"
 	"gorm.io/driver/sqlite"
@@ -13,7 +15,7 @@ import (
 var Database *gorm.DB
 
 func ConnectToDatabase() *sql.DB {
-	filename := os.ExpandEnv("$GOPATH/src/$MODNAME/$DATABASE")
+	filename := fmt.Sprintf("%s/%s", path.Dir(os.Getenv("GOMOD")), os.Getenv("DATABASE"))
 	log.Println("Database filename: ", filename)
 	dialector := sqlite.Open(filename)
 	database, exception := gorm.Open(dialector, &gorm.Config{})
