@@ -1,9 +1,8 @@
 FROM golang:1.20.4
 
-ENV MODNAME=github.com/zatarain/bookshop
-ENV MODPATH="$GOPATH/src/$MODNAME"
+ENV GOMOD=/api/go.mod
 
-WORKDIR ${MODPATH}
+WORKDIR /api
 COPY . .
 
 RUN go install github.com/joho/godotenv/cmd/godotenv@latest
