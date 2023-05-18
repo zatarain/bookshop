@@ -141,12 +141,10 @@ func TestLogin(test *testing.T) {
 		server := gin.New()
 		database := new(mocks.MockedDataAccessInterface)
 		users := &UsersController{Database: database}
-		call := database.On(
-			"First",
-			mock.AnythingOfType("*models.User"),
-			mock.AnythingOfType("string"),
-			mock.AnythingOfType("string"),
-		).Return(&gorm.DB{Error: nil})
+		anyUser := mock.AnythingOfType("*models.User")
+		call := database.
+			On("First", anyUser, "nickname = ?", "dummy-user").
+			Return(&gorm.DB{Error: nil})
 		call.RunFn = func(arguments mock.Arguments) {
 			user := arguments.Get(0).(*models.User)
 			user.ID = 12345
@@ -174,7 +172,7 @@ func TestLogin(test *testing.T) {
 
 		// Assert
 		assert.True(calledToCompareHashAndPassword)
-		//assert.Equal(http.StatusOK, recorder.Code)
+		assert.Equal(http.StatusOK, recorder.Code)
 		assert.Contains(recorder.Body.String(), "Yaaay! You are logged in :)")
 		database.AssertExpectations(test)
 	})
@@ -184,9 +182,8 @@ func TestLogin(test *testing.T) {
 		server := gin.New()
 		database := new(mocks.MockedDataAccessInterface)
 		users := &UsersController{Database: database}
-		database.
-			On("First", mock.AnythingOfType("*models.User")).
-			Return(&gorm.DB{Error: nil})
+		anyUser := mock.AnythingOfType("*models.User")
+		database.On("First", anyUser).Return(&gorm.DB{Error: nil})
 		server.POST("/login", users.Login)
 		body := bytes.NewBuffer([]byte("Malformed JSON"))
 		request, _ := http.NewRequest(http.MethodPost, "/login", body)
@@ -201,7 +198,12 @@ func TestLogin(test *testing.T) {
 		database.AssertNotCalled(test, "First", mock.AnythingOfType("*models.User"))
 	})
 
-	InvalidNicknameOrPassworTestcases := []struct {
+	user := Credentials{
+		Nickname: "dummy-user",
+		Password: "top-secret",
+	}
+
+	InvalidNicknameOrPasswordTestcases := []struct {
 		description string
 		user        models.User
 		compare     error
@@ -219,7 +221,7 @@ func TestLogin(test *testing.T) {
 			description: "Should NOT login the user when password doesn't match with stored hash",
 			user: models.User{
 				ID:       12345,
-				Nickname: "dummy-user",
+				Nickname: user.Nickname,
 				Password: "secret-top",
 			},
 			compare: errors.New("Invalid password"),
@@ -235,18 +237,17 @@ func TestLogin(test *testing.T) {
 		},
 	}
 
-	for _, testcase := range InvalidNicknameOrPassworTestcases {
+	anyUser := mock.AnythingOfType("*models.User")
+
+	for _, testcase := range InvalidNicknameOrPasswordTestcases {
 		test.Run(testcase.description, func(test *testing.T) {
 			// Arrange
 			server := gin.New()
 			database := new(mocks.MockedDataAccessInterface)
 			users := &UsersController{Database: database}
-			call := database.On(
-				"First",
-				mock.AnythingOfType("*models.User"),
-				mock.AnythingOfType("string"),
-				mock.AnythingOfType("string"),
-			).Return(&gorm.DB{Error: nil})
+			call := database.
+				On("First", anyUser, "nickname = ?", user.Nickname).
+				Return(&gorm.DB{Error: nil})
 			call.RunFn = func(arguments mock.Arguments) {
 				user := arguments.Get(0).(*models.User)
 				user.ID = testcase.user.ID
@@ -261,10 +262,6 @@ func TestLogin(test *testing.T) {
 			})
 
 			server.POST("/login", users.Login)
-			user := Credentials{
-				Nickname: "dummy-user",
-				Password: "top-secret",
-			}
 			body, _ := json.Marshal(user)
 			request, _ := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(body))
 			recorder := httptest.NewRecorder()
