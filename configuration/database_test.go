@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"os"
+	"path"
 	"reflect"
 	"testing"
 
@@ -92,6 +94,8 @@ func TestMigrateDatabase(test *testing.T) {
 
 	test.Run("Should connect to database and return generic SQL connection pointer", func(test *testing.T) {
 		// Arrange
+		filename := fmt.Sprintf("%s/%s", path.Dir(os.Getenv("GOMOD")), os.Getenv("DATABASE"))
+		os.Remove(filename) // Remove test database if exists
 		ConnectToDatabase()
 
 		// Act
