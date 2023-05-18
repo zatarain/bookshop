@@ -13,6 +13,7 @@ func TestSetup(test *testing.T) {
 		server := new(mocks.MockedEngine)
 		server.On("HEAD", "/health", mock.AnythingOfType("gin.HandlerFunc")).Return(server)
 		server.On("GET", "/books", mock.AnythingOfType("gin.HandlerFunc")).Return(server)
+		server.On("POST", "/signup", mock.AnythingOfType("gin.HandlerFunc")).Return(server)
 
 		// Act
 		Setup(server)

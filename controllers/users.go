@@ -6,7 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/zatarain/bookshop/models"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 type Credentials struct {
@@ -14,8 +13,8 @@ type Credentials struct {
 	Password string
 }
 
-type UserController struct {
-	Database *gorm.DB
+type UsersController struct {
+	Database models.DataAccessInterface
 }
 
 func HashPassword(password string) (string, error) {
@@ -23,13 +22,15 @@ func HashPassword(password string) (string, error) {
 	return string(hash), exception
 }
 
-func (users *UserController) Signup(context *gin.Context) {
+func (users *UsersController) Signup(context *gin.Context) {
 	var credentials Credentials
 
 	// Trying to bind input from JSON
-	if context.BindJSON(&credentials) != nil {
+	binding := context.BindJSON(&credentials)
+	if binding != nil {
 		context.JSON(http.StatusBadRequest, gin.H{
-			"message": "Failed to read input",
+			"summary": "Failed to read input",
+			"details": binding.Error(),
 		})
 		return
 	}
@@ -38,7 +39,8 @@ func (users *UserController) Signup(context *gin.Context) {
 	hash, exception := HashPassword(credentials.Password)
 	if exception != nil {
 		context.JSON(http.StatusBadRequest, gin.H{
-			"message": "Failed to create the hash",
+			"summary": "Failed to create the hash",
+			"details": exception.Error(),
 		})
 		return
 	}
@@ -48,15 +50,17 @@ func (users *UserController) Signup(context *gin.Context) {
 		Nickname: credentials.Nickname,
 		Password: hash,
 	}
-	users.Database.Create(&user)
-	if user.ID != 0 {
+	inserting := users.Database.Create(&user).Error
+	if inserting != nil {
 		context.JSON(http.StatusBadRequest, gin.H{
-			"message": "Failed to insert user into table users",
+			"summary": "Failed to insert user into table users",
+			"details": inserting.Error(),
 		})
 		return
 	}
 
 	context.JSON(http.StatusCreated, gin.H{
-		"message": "User successfully created",
+		"summary": "User successfully created",
+		"details": user.String(),
 	})
 }
