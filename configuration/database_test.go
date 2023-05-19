@@ -13,7 +13,6 @@ import (
 
 	"bou.ke/monkey"
 	"github.com/stretchr/testify/assert"
-	"github.com/zatarain/bookshop/models"
 	"gorm.io/gorm"
 )
 
@@ -102,14 +101,11 @@ func TestMigrateDatabase(test *testing.T) {
 		MigrateDatabase()
 
 		// Assert
-		Database.Create(&models.Book{
-			Title:    "dummy book",
-			Author:   "dummy author",
-			Price:    100,
-			Quantity: 4,
+		tables, exception := Database.Migrator().GetTables()
+		assert.Nil(exception)
+		assert.Equal(tables, []string{
+			"books",
+			"users",
 		})
-		var book models.Book
-		Database.Find(&book, 1)
-		assert.Equal(book.Title, "dummy book")
 	})
 }

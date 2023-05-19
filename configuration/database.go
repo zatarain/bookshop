@@ -35,5 +35,8 @@ func ConnectToDatabase() *sql.DB {
 }
 
 func MigrateDatabase() {
-	Database.AutoMigrate(&models.Book{})
+	Database.AutoMigrate(
+		&models.Book{},
+		&models.User{},
+	)
 }

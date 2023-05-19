@@ -8,17 +8,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHealth(test *testing.T) {
 	assert := assert.New(test)
+	require := require.New(test)
 	gin.SetMode(gin.TestMode)
 	server := gin.New()
 	server.HEAD("/health", HealthCheck)
 	recorder := httptest.NewRecorder()
 
 	request, exception := http.NewRequest(http.MethodHead, "/health", nil)
-	assert.Nil(exception)
+	require.Nil(exception)
 
 	// Perform the request
 	server.ServeHTTP(recorder, request)
