@@ -414,7 +414,7 @@ func TestAuthorise(test *testing.T) {
 
 func TestNewToken(test *testing.T) {
 	assert := assert.New(test)
-	users := &UsersController{SecretTokenKey: "super-sercret-key"}
+	users := &UsersController{SecretTokenKey: "super-secret-key"}
 	FakeNow := func() time.Time {
 		now, _ := time.Parse(time.DateOnly, "2021-01-01")
 		return now
@@ -445,7 +445,7 @@ func TestNewToken(test *testing.T) {
 func TestValidateToken(test *testing.T) {
 	assert := assert.New(test)
 	server := gin.New()
-	users := &UsersController{SecretTokenKey: "super-sercret-key"}
+	users := &UsersController{SecretTokenKey: "super-secret-key"}
 	var exception error
 	var userResult *models.User
 	FakeEndPoint := func(context *gin.Context) {
@@ -589,5 +589,39 @@ func TestValidateToken(test *testing.T) {
 		assert.NotNil(exception)
 		assert.Contains(exception.Error(), "user not found")
 		assert.Nil(userResult)
+	})
+}
+
+func TestDecoder(test *testing.T) {
+	assert := assert.New(test)
+	users := &UsersController{SecretTokenKey: "super-secret-key"}
+	test.Run("Should return error when it's different algorithm", func(test *testing.T) {
+		// Arrange
+		token := &jwt.Token{
+			Method: jwt.SigningMethodHS256,
+		}
+
+		// Act
+		result, exception := users.Decoder(token)
+
+		// Assert
+		assert.NotNil(result)
+		assert.Contains(string(result.([]byte)), "super-secret-key")
+		assert.Nil(exception)
+	})
+
+	test.Run("Should return error when it's different algorithm", func(test *testing.T) {
+		// Arrange
+		token := &jwt.Token{
+			Method: jwt.SigningMethodES512,
+		}
+
+		// Act
+		result, exception := users.Decoder(token)
+
+		// Assert
+		assert.Nil(result)
+		assert.NotNil(exception)
+		assert.Contains(exception.Error(), "wrong signing method")
 	})
 }
