@@ -86,7 +86,7 @@ func (users *UsersController) Signup(context *gin.Context) {
 	})
 }
 
-func (users *UsersController) NewToken(context *gin.Context, user *models.User) (string, error) {
+func (users *UsersController) NewToken(user *models.User) (string, error) {
 	// Create the token for user that last for 7 days
 	data := jwt.MapClaims{
 		"identifier": user.Nickname,
@@ -119,7 +119,7 @@ func (users *UsersController) Login(context *gin.Context) {
 	}
 
 	// Generate JWT Token and send it in the Cookies
-	token, exception := users.NewToken(context, user)
+	token, exception := users.NewToken(user)
 	if exception != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{
 			"summary": "Unable to generate access token",
@@ -134,7 +134,7 @@ func (users *UsersController) Login(context *gin.Context) {
 	context.JSON(http.StatusOK, gin.H{"summary": "Yaaay! You are logged in :)"})
 }
 
-func (users *UsersController) decoder(token *jwt.Token) (interface{}, error) {
+func (users *UsersController) Decoder(token *jwt.Token) (interface{}, error) {
 	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 		return nil, fmt.Errorf("wrong signing method: %v", token.Header["alg"])
 	}
@@ -149,7 +149,7 @@ func (users *UsersController) ValidateToken(context *gin.Context) (*models.User,
 	}
 
 	// Decoding the token using the secret key
-	token, exception := jwt.Parse(cookie, users.decoder)
+	token, exception := jwt.Parse(cookie, users.Decoder)
 	if exception != nil {
 		return nil, exception
 	}
@@ -161,7 +161,7 @@ func (users *UsersController) ValidateToken(context *gin.Context) (*models.User,
 	}
 
 	// Checking expiration date/time
-	expiration := claims["expiration"].(int64)
+	expiration := int64(claims["expiration"].(float64))
 	if time.Now().Unix() > expiration {
 		return nil, errors.New("expired session")
 	}

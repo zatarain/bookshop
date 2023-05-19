@@ -13,6 +13,7 @@ import (
 
 	"bou.ke/monkey"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -146,11 +147,11 @@ func TestLogin(test *testing.T) {
 		return errors.New("Invalid Password")
 	}
 
-	NiceFakeToken := func(*UsersController, *gin.Context, *models.User) (string, error) {
+	NiceFakeToken := func(*UsersController, *models.User) (string, error) {
 		return "Nice Fake Token", nil
 	}
 
-	NoToken := func(*UsersController, *gin.Context, *models.User) (string, error) {
+	NoToken := func(*UsersController, *models.User) (string, error) {
 		return "", errors.New("No Token")
 	}
 
@@ -408,5 +409,32 @@ func TestAuthorise(test *testing.T) {
 		// Assert
 		assert.Equal(http.StatusUnauthorized, recorder.Code)
 		assert.Contains(recorder.Body.String(), "Invalid token")
+	})
+}
+
+func TestNewToken(test *testing.T) {
+	assert := assert.New(test)
+	users := &UsersController{SecretTokenKey: "super-sercret-key"}
+	FakeNow := func() time.Time {
+		now, _ := time.Parse(time.DateOnly, "2021-01-01")
+		return now
+	}
+
+	test.Run("Should generate the token", func(test *testing.T) {
+		// Arrange
+		user := &models.User{Nickname: "dummy-user"}
+		monkey.Patch(time.Now, FakeNow)
+		expiration, _ := time.Parse(time.DateOnly, "2021-01-08")
+
+		// Act
+		token, exception := users.NewToken(user)
+
+		// Assert
+		parsed, _ := jwt.Parse(token, users.Decoder)
+		data, _ := parsed.Claims.(jwt.MapClaims)
+		assert.Equal(user.Nickname, data["identifier"].(string))
+		assert.Equal(expiration.Unix(), int64(data["expiration"].(float64)))
+		assert.NotEmpty(token)
+		assert.Nil(exception)
 	})
 }
