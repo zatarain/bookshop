@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -156,7 +155,6 @@ func TestLogin(test *testing.T) {
 	}
 
 	CheckCookie := func(cookie *http.Cookie) bool {
-		log.Printf("Cookie => %v\n", *cookie)
 		return cookie.Name == "Authorisation"
 	}
 
