@@ -451,13 +451,40 @@ func TestValidateToken(test *testing.T) {
 		SecretTokenKey: "super-sercret-key",
 	}
 	var exception error
+	var user *models.User
 	FakeEndPoint := func(context *gin.Context) {
-		_, exception = users.ValidateToken(context)
+		user, exception = users.ValidateToken(context)
 	}
 	server.GET("/", FakeEndPoint)
 
 	// Teardown test suite
 	defer monkey.UnpatchAll()
+
+	test.Run("Should return user and non-error when user exists", func(test *testing.T) {
+		// Arrange
+		token, _ := users.NewToken(&models.User{Nickname: "dummy-user"})
+		anyUser := mock.AnythingOfType("*models.User")
+		call := database.
+			On("First", anyUser, "nickname = ?", "dummy-user").
+			Return(&gorm.DB{Error: nil})
+		call.RunFn = func(arguments mock.Arguments) {
+			record := arguments.Get(0).(*models.User)
+			record.ID = 12345
+			record.Nickname = "dummy-user"
+			record.Password = "top-secret"
+		}
+		request, _ := http.NewRequest("GET", "/", nil)
+		request.AddCookie(&http.Cookie{Name: "Authorisation", Value: token})
+		recorder := httptest.NewRecorder()
+		exception = nil
+
+		// Act
+		server.ServeHTTP(recorder, request)
+
+		// Assert
+		assert.Nil(exception)
+		assert.NotNil(user)
+	})
 
 	test.Run("Should return error when there is no cookie", func(test *testing.T) {
 		// Arrange
@@ -469,12 +496,13 @@ func TestValidateToken(test *testing.T) {
 		server.ServeHTTP(recorder, request)
 
 		// Assert
+		assert.Nil(user)
 		assert.NotNil(exception)
 	})
 
 	test.Run("Should return error when detects is different algorithm", func(test *testing.T) {
 		// Arrange
-		token := jwt.NewWithClaims(jwt.SigningMethodES512, jwt.MapClaims{"super": "token"})
+		token := jwt.NewWithClaims(jwt.SigningMethodNone, jwt.MapClaims{"identifier": "token", "expiration": 4})
 		signed, _ := token.SignedString([]byte(users.SecretTokenKey))
 		request, _ := http.NewRequest("GET", "/", nil)
 		request.AddCookie(&http.Cookie{Name: "Authorisation", Value: signed})
@@ -485,7 +513,31 @@ func TestValidateToken(test *testing.T) {
 		server.ServeHTTP(recorder, request)
 
 		// Assert
+		assert.Nil(user)
 		assert.NotNil(exception)
 	})
 
+	test.Run("Should return error when detects an expired token", func(test *testing.T) {
+		// Arrange
+		token := jwt.NewWithClaims(
+			jwt.SigningMethodHS256,
+			jwt.MapClaims{
+				"identifier": "token",
+				"expiration": 0,
+			},
+		)
+		expired, _ := token.SignedString([]byte(users.SecretTokenKey))
+		request, _ := http.NewRequest("GET", "/", nil)
+		request.AddCookie(&http.Cookie{Name: "Authorisation", Value: expired})
+		recorder := httptest.NewRecorder()
+		exception = nil
+
+		// Act
+		server.ServeHTTP(recorder, request)
+
+		// Assert
+		assert.Nil(user)
+		assert.NotNil(exception)
+		assert.Contains(exception.Error(), "expired session")
+	})
 }
