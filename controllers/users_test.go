@@ -451,9 +451,9 @@ func TestValidateToken(test *testing.T) {
 		SecretTokenKey: "super-sercret-key",
 	}
 	var exception error
-	var user *models.User
+	var userResult *models.User
 	FakeEndPoint := func(context *gin.Context) {
-		user, exception = users.ValidateToken(context)
+		userResult, exception = users.ValidateToken(context)
 	}
 	server.GET("/", FakeEndPoint)
 
@@ -483,7 +483,7 @@ func TestValidateToken(test *testing.T) {
 
 		// Assert
 		assert.Nil(exception)
-		assert.NotNil(user)
+		assert.NotNil(userResult)
 	})
 
 	test.Run("Should return error when there is no cookie", func(test *testing.T) {
@@ -496,7 +496,7 @@ func TestValidateToken(test *testing.T) {
 		server.ServeHTTP(recorder, request)
 
 		// Assert
-		assert.Nil(user)
+		assert.Nil(userResult)
 		assert.NotNil(exception)
 	})
 
@@ -513,7 +513,7 @@ func TestValidateToken(test *testing.T) {
 		server.ServeHTTP(recorder, request)
 
 		// Assert
-		assert.Nil(user)
+		assert.Nil(userResult)
 		assert.NotNil(exception)
 	})
 
@@ -536,8 +536,36 @@ func TestValidateToken(test *testing.T) {
 		server.ServeHTTP(recorder, request)
 
 		// Assert
-		assert.Nil(user)
+		assert.Nil(userResult)
 		assert.NotNil(exception)
 		assert.Contains(exception.Error(), "expired session")
+	})
+
+	test.Run("Should return error when user doesn't exist", func(test *testing.T) {
+		// Arrange
+		token, _ := users.NewToken(&models.User{Nickname: "user-dummy"})
+		anyUser := mock.AnythingOfType("*models.User")
+		call := database.
+			On("First", anyUser, "nickname = ?", "user-dummy").
+			Return(&gorm.DB{Error: nil})
+		call.RunFn = func(arguments mock.Arguments) {
+			record := arguments.Get(0).(*models.User)
+			record.ID = 0
+			record.Nickname = "found!"
+			record.Password = ""
+		}
+		request, _ := http.NewRequest("GET", "/", nil)
+		request.AddCookie(&http.Cookie{Name: "Authorisation", Value: token})
+		recorder := httptest.NewRecorder()
+		exception = nil
+
+		// Act
+		server.ServeHTTP(recorder, request)
+
+		// Assert
+		database.AssertExpectations(test)
+		assert.NotNil(exception)
+		assert.Contains(exception.Error(), "user not found")
+		assert.Nil(userResult)
 	})
 }
