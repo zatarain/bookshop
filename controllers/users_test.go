@@ -445,15 +445,14 @@ func TestNewToken(test *testing.T) {
 func TestValidateToken(test *testing.T) {
 	assert := assert.New(test)
 	server := gin.New()
-	database := new(mocks.MockedDataAccessInterface)
-	users := &UsersController{
-		Database:       database,
-		SecretTokenKey: "super-sercret-key",
-	}
+	users := &UsersController{SecretTokenKey: "super-sercret-key"}
 	var exception error
 	var userResult *models.User
 	FakeEndPoint := func(context *gin.Context) {
 		userResult, exception = users.ValidateToken(context)
+	}
+	InvalidToken := func(string, jwt.Keyfunc, ...jwt.ParserOption) (*jwt.Token, error) {
+		return &jwt.Token{Valid: false}, nil
 	}
 	server.GET("/", FakeEndPoint)
 
@@ -462,6 +461,8 @@ func TestValidateToken(test *testing.T) {
 
 	test.Run("Should return user and non-error when user exists", func(test *testing.T) {
 		// Arrange
+		database := new(mocks.MockedDataAccessInterface)
+		users.Database = database
 		token, _ := users.NewToken(&models.User{Nickname: "dummy-user"})
 		anyUser := mock.AnythingOfType("*models.User")
 		call := database.
@@ -484,6 +485,7 @@ func TestValidateToken(test *testing.T) {
 		// Assert
 		assert.Nil(exception)
 		assert.NotNil(userResult)
+		database.AssertExpectations(test)
 	})
 
 	test.Run("Should return error when there is no cookie", func(test *testing.T) {
@@ -517,6 +519,24 @@ func TestValidateToken(test *testing.T) {
 		assert.NotNil(exception)
 	})
 
+	test.Run("Should return error when detects an invalid token", func(test *testing.T) {
+		// Arrange
+		monkey.Patch(jwt.Parse, InvalidToken)
+		defer monkey.UnpatchAll()
+		request, _ := http.NewRequest("GET", "/", nil)
+		request.AddCookie(&http.Cookie{Name: "Authorisation", Value: "invalid"})
+		recorder := httptest.NewRecorder()
+		exception = nil
+
+		// Act
+		server.ServeHTTP(recorder, request)
+
+		// Assert
+		assert.Nil(userResult)
+		assert.NotNil(exception)
+		assert.Contains(exception.Error(), "invalid authentication token")
+	})
+
 	test.Run("Should return error when detects an expired token", func(test *testing.T) {
 		// Arrange
 		token := jwt.NewWithClaims(
@@ -543,6 +563,8 @@ func TestValidateToken(test *testing.T) {
 
 	test.Run("Should return error when user doesn't exist", func(test *testing.T) {
 		// Arrange
+		database := new(mocks.MockedDataAccessInterface)
+		users.Database = database
 		token, _ := users.NewToken(&models.User{Nickname: "user-dummy"})
 		anyUser := mock.AnythingOfType("*models.User")
 		call := database.
