@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -14,9 +15,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/zatarain/bookshop/mocks"
 	"github.com/zatarain/bookshop/models"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/exp/slices"
 	"gorm.io/gorm"
 )
 
@@ -135,6 +138,27 @@ func TestLogin(test *testing.T) {
 	assert := assert.New(test)
 	gin.SetMode(gin.TestMode)
 
+	CompareSuccessful := func([]byte, []byte) error {
+		return nil
+	}
+
+	CompareFailure := func([]byte, []byte) error {
+		return errors.New("Invalid Password")
+	}
+
+	NiceFakeToken := func(*UsersController, *gin.Context, *models.User) (string, error) {
+		return "Nice Fake Token", nil
+	}
+
+	NoToken := func(*UsersController, *gin.Context, *models.User) (string, error) {
+		return "", errors.New("No Token")
+	}
+
+	CheckCookie := func(cookie *http.Cookie) bool {
+		log.Printf("Cookie => %v\n", *cookie)
+		return cookie.Name == "Authorisation"
+	}
+
 	// Teardown test suite
 	defer monkey.UnpatchAll()
 
@@ -154,12 +178,8 @@ func TestLogin(test *testing.T) {
 			user.Password = "top-secret"
 		}
 
-		calledToCompareHashAndPassword := false
-		monkey.Patch(bcrypt.CompareHashAndPassword, func([]byte, []byte) error {
-			calledToCompareHashAndPassword = true
-			return nil
-		})
-
+		monkey.Patch(bcrypt.CompareHashAndPassword, CompareSuccessful)
+		monkey.PatchInstanceMethod(reflect.TypeOf(users), "NewToken", NiceFakeToken)
 		server.POST("/login", users.Login)
 		user := Credentials{
 			Nickname: "dummy-user",
@@ -171,12 +191,57 @@ func TestLogin(test *testing.T) {
 
 		// Act
 		server.ServeHTTP(recorder, request)
+		cookies := recorder.Result().Cookies()
+		index := slices.IndexFunc(cookies, CheckCookie)
 
 		// Assert
-		assert.True(calledToCompareHashAndPassword)
+		database.AssertExpectations(test)
 		assert.Equal(http.StatusOK, recorder.Code)
 		assert.Contains(recorder.Body.String(), "Yaaay! You are logged in :)")
+		require.GreaterOrEqual(test, index, 0)
+		assert.Equal("Nice+Fake+Token", cookies[index].Value)
+		assert.Equal(7*24*60*60, cookies[index].MaxAge)
+		assert.False(cookies[index].Secure)
+		assert.True(cookies[index].HttpOnly)
+	})
+
+	test.Run("Should response with internal server error when unable to generate token", func(test *testing.T) {
+		// Arrange
+		server := gin.New()
+		database := new(mocks.MockedDataAccessInterface)
+		users := &UsersController{Database: database}
+		anyUser := mock.AnythingOfType("*models.User")
+		call := database.
+			On("First", anyUser, "nickname = ?", "dummy-user").
+			Return(&gorm.DB{Error: nil})
+		call.RunFn = func(arguments mock.Arguments) {
+			user := arguments.Get(0).(*models.User)
+			user.ID = 12345
+			user.Nickname = "dummy-user"
+			user.Password = "top-secret"
+		}
+
+		monkey.Patch(bcrypt.CompareHashAndPassword, CompareSuccessful)
+		monkey.PatchInstanceMethod(reflect.TypeOf(users), "NewToken", NoToken)
+		server.POST("/login", users.Login)
+		user := Credentials{
+			Nickname: "dummy-user",
+			Password: "top-secret",
+		}
+		body, _ := json.Marshal(user)
+		request, _ := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(body))
+		recorder := httptest.NewRecorder()
+
+		// Act
+		server.ServeHTTP(recorder, request)
+		cookies := recorder.Result().Cookies()
+		index := slices.IndexFunc(cookies, CheckCookie)
+
+		// Assert
 		database.AssertExpectations(test)
+		assert.Equal(http.StatusInternalServerError, recorder.Code)
+		assert.Contains(recorder.Body.String(), "Unable to generate access token")
+		require.Equal(test, index, -1)
 	})
 
 	test.Run("Should NOT try to login the user when unable to bind JSON", func(test *testing.T) {
@@ -208,7 +273,7 @@ func TestLogin(test *testing.T) {
 	InvalidNicknameOrPasswordTestcases := []struct {
 		description string
 		user        models.User
-		compare     error
+		compare     func([]byte, []byte) error
 	}{
 		{
 			description: "Should NOT login the user when we didn't find nickname in database",
@@ -217,7 +282,7 @@ func TestLogin(test *testing.T) {
 				Nickname: "",
 				Password: "",
 			},
-			compare: nil,
+			compare: CompareSuccessful,
 		},
 		{
 			description: "Should NOT login the user when password doesn't match with stored hash",
@@ -226,7 +291,7 @@ func TestLogin(test *testing.T) {
 				Nickname: user.Nickname,
 				Password: "secret-top",
 			},
-			compare: errors.New("Invalid password"),
+			compare: CompareFailure,
 		},
 		{
 			description: "Should NOT login the user when either we didn't find nickname in database or password doesn't match",
@@ -235,7 +300,7 @@ func TestLogin(test *testing.T) {
 				Nickname: "",
 				Password: "",
 			},
-			compare: errors.New("Invalid password"),
+			compare: CompareFailure,
 		},
 	}
 
@@ -257,11 +322,7 @@ func TestLogin(test *testing.T) {
 				user.Password = testcase.user.Password
 			}
 
-			calledToCompareHashAndPassword := false
-			monkey.Patch(bcrypt.CompareHashAndPassword, func([]byte, []byte) error {
-				calledToCompareHashAndPassword = true
-				return testcase.compare
-			})
+			monkey.Patch(bcrypt.CompareHashAndPassword, testcase.compare)
 
 			server.POST("/login", users.Login)
 			body, _ := json.Marshal(user)
@@ -274,7 +335,6 @@ func TestLogin(test *testing.T) {
 			// Assert
 			assert.Equal(http.StatusBadRequest, recorder.Code)
 			assert.Contains(recorder.Body.String(), "Invalid nickname or password")
-			assert.True(calledToCompareHashAndPassword)
 			database.AssertExpectations(test)
 		})
 	}
