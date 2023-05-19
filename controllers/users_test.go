@@ -420,6 +420,9 @@ func TestNewToken(test *testing.T) {
 		return now
 	}
 
+	// Teardown test suite
+	defer monkey.UnpatchAll()
+
 	test.Run("Should generate the token", func(test *testing.T) {
 		// Arrange
 		user := &models.User{Nickname: "dummy-user"}
@@ -437,4 +440,52 @@ func TestNewToken(test *testing.T) {
 		assert.NotEmpty(token)
 		assert.Nil(exception)
 	})
+}
+
+func TestValidateToken(test *testing.T) {
+	assert := assert.New(test)
+	server := gin.New()
+	database := new(mocks.MockedDataAccessInterface)
+	users := &UsersController{
+		Database:       database,
+		SecretTokenKey: "super-sercret-key",
+	}
+	var exception error
+	FakeEndPoint := func(context *gin.Context) {
+		_, exception = users.ValidateToken(context)
+	}
+	server.GET("/", FakeEndPoint)
+
+	// Teardown test suite
+	defer monkey.UnpatchAll()
+
+	test.Run("Should return error when there is no cookie", func(test *testing.T) {
+		// Arrange
+		request, _ := http.NewRequest("GET", "/", nil)
+		recorder := httptest.NewRecorder()
+		exception = nil
+
+		// Act
+		server.ServeHTTP(recorder, request)
+
+		// Assert
+		assert.NotNil(exception)
+	})
+
+	test.Run("Should return error when detects is different algorithm", func(test *testing.T) {
+		// Arrange
+		token := jwt.NewWithClaims(jwt.SigningMethodES512, jwt.MapClaims{"super": "token"})
+		signed, _ := token.SignedString([]byte(users.SecretTokenKey))
+		request, _ := http.NewRequest("GET", "/", nil)
+		request.AddCookie(&http.Cookie{Name: "Authorisation", Value: signed})
+		recorder := httptest.NewRecorder()
+		exception = nil
+
+		// Act
+		server.ServeHTTP(recorder, request)
+
+		// Assert
+		assert.NotNil(exception)
+	})
+
 }
