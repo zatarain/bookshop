@@ -364,6 +364,14 @@ func TestAuthorise(test *testing.T) {
 		assert.False(true, "This should never run otherwise the test failed!")
 	}
 
+	ValidToken := func(*UsersController, *gin.Context) (*models.User, error) {
+		return &dummy, nil
+	}
+
+	InvalidToken := func(*UsersController, *gin.Context) (*models.User, error) {
+		return nil, errors.New("Invalid token")
+	}
+
 	// Teardown test suite
 	defer monkey.UnpatchAll()
 
@@ -373,9 +381,7 @@ func TestAuthorise(test *testing.T) {
 		database := new(mocks.MockedDataAccessInterface)
 		users := &UsersController{Database: database}
 		server.GET("/", users.Authorise, AuthorisedEndPointHandler)
-		monkey.PatchInstanceMethod(reflect.TypeOf(users), "ValidateToken", func(*UsersController, *gin.Context) (*models.User, error) {
-			return &dummy, nil
-		})
+		monkey.PatchInstanceMethod(reflect.TypeOf(users), "ValidateToken", ValidToken)
 		request, _ := http.NewRequest("GET", "/", nil)
 		recorder := httptest.NewRecorder()
 
@@ -392,9 +398,7 @@ func TestAuthorise(test *testing.T) {
 		database := new(mocks.MockedDataAccessInterface)
 		users := &UsersController{Database: database}
 		server.GET("/", users.Authorise, UnauthorisedEndPointHandler)
-		monkey.PatchInstanceMethod(reflect.TypeOf(users), "ValidateToken", func(*UsersController, *gin.Context) (*models.User, error) {
-			return nil, errors.New("Invalid token")
-		})
+		monkey.PatchInstanceMethod(reflect.TypeOf(users), "ValidateToken", InvalidToken)
 		request, _ := http.NewRequest("GET", "/", nil)
 		recorder := httptest.NewRecorder()
 
